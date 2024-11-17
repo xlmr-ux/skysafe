@@ -1,0 +1,34 @@
+/* Logo Styling */
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px; /* Space between logo and text */
+    text-align: left; /* Align text on the left */
+}
+
+.logo {
+    width: 60px; /* Adjust the size of the logo */
+    height: auto;
+    margin-left: 20px; /* Add space to the left */
+}
+
+@media (max-width: 768px) {
+    .logo {
+        width: 50px; /* Scale down logo size for smaller screens */
+    }
+}
+
+@media (max-width: 480px) {
+    .logo {
+        width: 40px;
+    }
+
+    .header-container h1 {
+        font-size: 1.8rem;
+    }
+
+    .header-container p {
+        font-size: 1rem;
+    }
+}
