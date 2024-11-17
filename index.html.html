@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Lock - Secure Cloud Storage</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+            text-align: center;
+        }
+
+        header, footer {
+            background-color: #4b0082;
+            color: #ffd700;
+            padding: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1, footer h3 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        header p, footer p {
+            font-size: 1.2rem;
+            margin: 10px 0 0;
+        }
+
+        h1 {
+            margin: 20px 0;
+            font-size: 2rem;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin: 0 10px 20px;
+        }
+
+        /* Services Container */
+        .services-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* Service Card */
+        .service {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fff;
+            width: 300px;
+            max-width: 90%; /* Ensure proper scaling */
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .service img {
+            width: 80px;
+            height: auto;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        .service h3 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .service button {
+            background-color: #4b0082;
+            color: #ffd700;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .service button:hover {
+            background-color: #3a006a;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            header h1, footer h3 {
+                font-size: 2rem;
+            }
+
+            header p, footer p {
+                font-size: 1rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            p {
+                font-size: 1rem;
+            }
+
+            .service {
+                width: 90%; /* Adjust card width for smaller screens */
+            }
+
+            .service img {
+                width: 60px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1, footer h3 {
+                font-size: 1.8rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .service {
+                width: 95%; /* Take most of the screen width */
+            }
+
+            .service img {
+                width: 50px;
+            }
+
+            .service h3 {
+                font-size: 1.2rem;
+            }
+
+            .service button {
+                font-size: 0.9rem;
+                padding: 8px 10px;
+            }
+        }
+    </style>
+    <script>
+        async function handleFileUpload(url, fileInputId) {
+            const fileInput = document.getElementById(fileInputId);
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("Please select a file to proceed.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message || "Operation completed successfully.");
+                } else {
+                    alert(result.error || "An error occurred.");
+                }
+            } catch (error) {
+                alert("Error connecting to the server.");
+                console.error(error);
+            }
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Sky Lock</h1>
+        <p>Secure Your Files with Confidence</p>
+    </header>
+
+    <h1>Our Services</h1>
+    <p>Explore how Sky Lock keeps your files safe in the cloud</p>
+
+    <div class="services-container">
+        <!-- Encrypt Files -->
+        <div class="service">
+            <h3>Encrypt Files</h3>
+            <img src="images/encrypt.png" alt="Encrypt Icon" 
+                 onclick="document.getElementById('encryptFileInput').click()" />
+            <input type="file" id="encryptFileInput" style="display: none;" />
+            <button onclick="handleFileUpload('/encrypt', 'encryptFileInput')">Encrypt File</button>
+        </div>
+
+        <!-- Decrypt Files -->
+        <div class="service">
+            <h3>Decrypt Files</h3>
+            <img src="images/decrypt.png" alt="Decrypt Icon" 
+                 onclick="document.getElementById('decryptFileInput').click()" />
+            <input type="file" id="decryptFileInput" style="display: none;" />
+            <button onclick="handleFileUpload('/decrypt', 'decryptFileInput')">Decrypt File</button>
+        </div>
+
+        <!-- Upload to Google Cloud -->
+        <div class="service">
+            <h3>Upload to Google Cloud</h3>
+            <img src="images/gcloud.png" alt="Google Cloud Logo" 
+                 onclick="document.getElementById('googleFileInput').click()" />
+            <input type="file" id="googleFileInput" style="display: none;" />
+            <button onclick="handleFileUpload('/upload/google', 'googleFileInput')">Upload to Google</button>
+        </div>
+
+        <!-- Upload to AWS S3 -->
+        <div class="service">
+            <h3>Upload to Amazon Web Services</h3>
+            <img src="images/aws.png" alt="AWS Logo" 
+                 onclick="document.getElementById('awsFileInput').click()" />
+            <input type="file" id="awsFileInput" style="display: none;" />
+            <button onclick="handleFileUpload('/upload/aws', 'awsFileInput')">Upload to AWS</button>
+        </div>
+    </div>
+
+    <footer>
+        <h3>Contact Us</h3>
+        <p>Have questions or need help? Get in touch with us!</p>
+    </footer>
+</body>
+</html>
