@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 
-    <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sky Lock - Secure Cloud Storage</title>
@@ -58,7 +58,7 @@
             border-radius: 8px;
             background-color: #fff;
             width: 300px;
-            max-width: 90%; /* Ensure proper scaling */
+            max-width: 90%;
             padding: 20px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             text-align: center;
@@ -89,63 +89,9 @@
         .service button:hover {
             background-color: #3a006a;
         }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            header h1, footer h3 {
-                font-size: 2rem;
-            }
-
-            header p, footer p {
-                font-size: 1rem;
-            }
-
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            p {
-                font-size: 1rem;
-            }
-
-            .service {
-                width: 90%; /* Adjust card width for smaller screens */
-            }
-
-            .service img {
-                width: 60px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            header h1, footer h3 {
-                font-size: 1.8rem;
-            }
-
-            h1 {
-                font-size: 1.5rem;
-            }
-
-            .service {
-                width: 95%; /* Take most of the screen width */
-            }
-
-            .service img {
-                width: 50px;
-            }
-
-            .service h3 {
-                font-size: 1.2rem;
-            }
-
-            .service button {
-                font-size: 0.9rem;
-                padding: 8px 10px;
-            }
-        }
     </style>
     <script>
-        async function handleFileUpload(url, fileInputId) {
+        async function handleFileUpload(url, fileInputId, buttonId) {
             const fileInput = document.getElementById(fileInputId);
             const file = fileInput.files[0];
 
@@ -172,21 +118,30 @@
             } catch (error) {
                 alert("Error connecting to the server.");
                 console.error(error);
+            } finally {
+                document.getElementById(buttonId).innerText = "Select File";
+                fileInput.value = ""; // Reset file input
             }
+        }
+
+        function handleFileSelect(fileInputId, buttonId) {
+            const fileInput = document.getElementById(fileInputId);
+            const button = document.getElementById(buttonId);
+            fileInput.click();
+            fileInput.onchange = () => {
+                if (fileInput.files[0]) {
+                    button.innerText = "Upload";
+                }
+            };
         }
     </script>
 </head>
-<body>
-<header>
-    <div class="header-container">
-        <img src="images/logo.png" alt="Sky Lock Logo" class="logo">
-        <div>
-            <h1>Sky Lock</h1>
-            <p>Secure Your Files with Confidence</p>
-        </div>
-    </div>
-</header>
 
+<body>
+    <header>
+        <h1>Sky Lock</h1>
+        <p>Secure Your Files with Confidence</p>
+    </header>
 
     <h1>Our Services</h1>
     <p>Explore how Sky Lock keeps your files safe in the cloud</p>
@@ -195,37 +150,33 @@
         <!-- Encrypt Files -->
         <div class="service">
             <h3>Encrypt Files</h3>
-            <img src="images/encrypt.png" alt="Encrypt Icon" 
-                 onclick="document.getElementById('encryptFileInput').click()" />
+            <img src="images/encrypt.png" alt="Encrypt Icon" onclick="handleFileSelect('encryptFileInput', 'encryptButton')" />
             <input type="file" id="encryptFileInput" style="display: none;" />
-            <button onclick="handleFileUpload('/encrypt', 'encryptFileInput')">Encrypt File</button>
+            <button id="encryptButton" onclick="handleFileUpload('/encrypt', 'encryptFileInput', 'encryptButton')">Select File</button>
         </div>
 
         <!-- Decrypt Files -->
         <div class="service">
             <h3>Decrypt Files</h3>
-            <img src="images/decrypt.png" alt="Decrypt Icon" 
-                 onclick="document.getElementById('decryptFileInput').click()" />
+            <img src="images/decrypt.png" alt="Decrypt Icon" onclick="handleFileSelect('decryptFileInput', 'decryptButton')" />
             <input type="file" id="decryptFileInput" style="display: none;" />
-            <button onclick="handleFileUpload('/decrypt', 'decryptFileInput')">Decrypt File</button>
+            <button id="decryptButton" onclick="handleFileUpload('/decrypt', 'decryptFileInput', 'decryptButton')">Select File</button>
         </div>
 
         <!-- Upload to Google Cloud -->
         <div class="service">
             <h3>Upload to Google Cloud</h3>
-            <img src="images/gcloud.png" alt="Google Cloud Logo" 
-                 onclick="document.getElementById('googleFileInput').click()" />
+            <img src="images/gcloud.png" alt="Google Cloud Logo" onclick="handleFileSelect('googleFileInput', 'googleButton')" />
             <input type="file" id="googleFileInput" style="display: none;" />
-            <button onclick="handleFileUpload('/upload/google', 'googleFileInput')">Upload to Google</button>
+            <button id="googleButton" onclick="handleFileUpload('/upload/google', 'googleFileInput', 'googleButton')">Select File</button>
         </div>
 
         <!-- Upload to AWS S3 -->
         <div class="service">
             <h3>Upload to Amazon Web Services</h3>
-            <img src="images/aws.png" alt="AWS Logo" 
-                 onclick="document.getElementById('awsFileInput').click()" />
+            <img src="images/aws.png" alt="AWS Logo" onclick="handleFileSelect('awsFileInput', 'awsButton')" />
             <input type="file" id="awsFileInput" style="display: none;" />
-            <button onclick="handleFileUpload('/upload/aws', 'awsFileInput')">Upload to AWS</button>
+            <button id="awsButton" onclick="handleFileUpload('/upload/aws', 'awsFileInput', 'awsButton')">Select File</button>
         </div>
     </div>
 
@@ -234,4 +185,5 @@
         <p>Have questions or need help? Get in touch with us!</p>
     </footer>
 </body>
+
 </html>
