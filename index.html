@@ -67,8 +67,8 @@
         .service img {
             width: 80px;
             height: auto;
-            cursor: pointer;
             margin: 10px 0;
+            pointer-events: none; /* Disable clicking on the icon */
         }
 
         .service h3 {
@@ -84,6 +84,7 @@
             padding: 10px 15px;
             cursor: pointer;
             font-size: 1rem;
+            margin: 5px 0;
         }
 
         .service button:hover {
@@ -91,12 +92,17 @@
         }
     </style>
     <script>
-        async function handleFileUpload(url, fileInputId, buttonId) {
+        function handleFileSelect(fileInputId) {
+            const fileInput = document.getElementById(fileInputId);
+            fileInput.click();
+        }
+
+        async function handleFileUpload(url, fileInputId) {
             const fileInput = document.getElementById(fileInputId);
             const file = fileInput.files[0];
 
             if (!file) {
-                alert("Please select a file to proceed.");
+                alert("Please select a file before uploading.");
                 return;
             }
 
@@ -111,28 +117,14 @@
 
                 const result = await response.json();
                 if (response.ok) {
-                    alert(result.message || "Operation completed successfully.");
+                    alert(result.message || "File uploaded successfully.");
                 } else {
-                    alert(result.error || "An error occurred.");
+                    alert(result.error || "An error occurred during upload.");
                 }
             } catch (error) {
                 alert("Error connecting to the server.");
                 console.error(error);
-            } finally {
-                document.getElementById(buttonId).innerText = "Select File";
-                fileInput.value = ""; // Reset file input
             }
-        }
-
-        function handleFileSelect(fileInputId, buttonId) {
-            const fileInput = document.getElementById(fileInputId);
-            const button = document.getElementById(buttonId);
-            fileInput.click();
-            fileInput.onchange = () => {
-                if (fileInput.files[0]) {
-                    button.innerText = "Upload";
-                }
-            };
         }
     </script>
 </head>
@@ -150,33 +142,37 @@
         <!-- Encrypt Files -->
         <div class="service">
             <h3>Encrypt Files</h3>
-            <img src="images/encrypt.png" alt="Encrypt Icon" onclick="handleFileSelect('encryptFileInput', 'encryptButton')" />
+            <img src="images/encrypt.png" alt="Encrypt Icon" />
             <input type="file" id="encryptFileInput" style="display: none;" />
-            <button id="encryptButton" onclick="handleFileUpload('/encrypt', 'encryptFileInput', 'encryptButton')">Select File</button>
+            <button onclick="handleFileSelect('encryptFileInput')">Select File</button>
+            <button onclick="handleFileUpload('/encrypt', 'encryptFileInput')">Upload File</button>
         </div>
 
         <!-- Decrypt Files -->
         <div class="service">
             <h3>Decrypt Files</h3>
-            <img src="images/decrypt.png" alt="Decrypt Icon" onclick="handleFileSelect('decryptFileInput', 'decryptButton')" />
+            <img src="images/decrypt.png" alt="Decrypt Icon" />
             <input type="file" id="decryptFileInput" style="display: none;" />
-            <button id="decryptButton" onclick="handleFileUpload('/decrypt', 'decryptFileInput', 'decryptButton')">Select File</button>
+            <button onclick="handleFileSelect('decryptFileInput')">Select File</button>
+            <button onclick="handleFileUpload('/decrypt', 'decryptFileInput')">Upload File</button>
         </div>
 
         <!-- Upload to Google Cloud -->
         <div class="service">
             <h3>Upload to Google Cloud</h3>
-            <img src="images/gcloud.png" alt="Google Cloud Logo" onclick="handleFileSelect('googleFileInput', 'googleButton')" />
+            <img src="images/gcloud.png" alt="Google Cloud Logo" />
             <input type="file" id="googleFileInput" style="display: none;" />
-            <button id="googleButton" onclick="handleFileUpload('/upload/google', 'googleFileInput', 'googleButton')">Select File</button>
+            <button onclick="handleFileSelect('googleFileInput')">Select File</button>
+            <button onclick="handleFileUpload('/upload/google', 'googleFileInput')">Upload File</button>
         </div>
 
         <!-- Upload to AWS S3 -->
         <div class="service">
             <h3>Upload to Amazon Web Services</h3>
-            <img src="images/aws.png" alt="AWS Logo" onclick="handleFileSelect('awsFileInput', 'awsButton')" />
+            <img src="images/aws.png" alt="AWS Logo" />
             <input type="file" id="awsFileInput" style="display: none;" />
-            <button id="awsButton" onclick="handleFileUpload('/upload/aws', 'awsFileInput', 'awsButton')">Select File</button>
+            <button onclick="handleFileSelect('awsFileInput')">Select File</button>
+            <button onclick="handleFileUpload('/upload/aws', 'awsFileInput')">Upload File</button>
         </div>
     </div>
 
