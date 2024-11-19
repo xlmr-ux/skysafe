@@ -1,67 +1,81 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from cryptography.fernet import Fernet
-import sqlite3
 import os
-import io
+import sqlite3
 
 app = Flask(__name__)
 
-# Encryption/Decryption setup
+# Generate encryption key
 SECRET_KEY = Fernet.generate_key()
 cipher = Fernet(SECRET_KEY)
 
+# File upload directory
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
 # Database setup
-DB_FILE = 'file_storage.db'
+DATABASE_FILE = 'file_data.db'
 
 def init_db():
-    """Initialize the database."""
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
+    """Initialize the SQLite database."""
+    conn = sqlite3.connect(DATABASE_FILE)
+    cursor = conn.cursor()
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            file_name TEXT NOT NULL,
-            file_data BLOB NOT NULL,
-            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            filename TEXT NOT NULL,
+            file_path TEXT NOT NULL
         )
-        ''')
-        conn.commit()
+    """)
+    conn.commit()
+    conn.close()
 
+# Initialize the database
 init_db()
-
-# Routes
 
 @app.route('/encrypt', methods=['POST'])
 def encrypt_file():
-    """Encrypt a file."""
+    """Encrypt a file and save the encrypted file."""
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    file_data = file.read()
-    encrypted_data = cipher.encrypt(file_data)
+    original_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(original_path)
 
-    encrypted_filename = f"{file.filename}.enc"
-    return send_file(io.BytesIO(encrypted_data),
-                     as_attachment=True,
-                     download_name=encrypted_filename,
-                     mimetype="application/octet-stream")
+    # Encrypt file
+    with open(original_path, 'rb') as f:
+        encrypted_data = cipher.encrypt(f.read())
+
+    encrypted_path = f"{original_path}.enc"
+    with open(encrypted_path, 'wb') as f:
+        f.write(encrypted_data)
+
+    return jsonify({"message": "File encrypted successfully", "path": encrypted_path})
 
 @app.route('/decrypt', methods=['POST'])
 def decrypt_file():
-    """Decrypt a file."""
+    """Decrypt an encrypted file and save the original file."""
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    file_data = file.read()
-    decrypted_data = cipher.decrypt(file_data)
+    encrypted_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(encrypted_path)
 
-    original_filename = file.filename.replace('.enc', '')
-    return send_file(io.BytesIO(decrypted_data),
-                     as_attachment=True,
-                     download_name=original_filename,
-                     mimetype="application/octet-stream")
+    # Decrypt file
+    try:
+        with open(encrypted_path, 'rb') as f:
+            decrypted_data = cipher.decrypt(f.read())
+    except Exception as e:
+        return jsonify({"error": "Decryption failed", "details": str(e)}), 400
+
+    decrypted_path = encrypted_path.replace('.enc', '')
+    with open(decrypted_path, 'wb') as f:
+        f.write(decrypted_data)
+
+    return jsonify({"message": "File decrypted successfully", "path": decrypted_path})
 
 @app.route('/upload/database', methods=['POST'])
 def upload_to_database():
@@ -70,42 +84,34 @@ def upload_to_database():
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    file_data = file.read()
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)
 
-    with sqlite3.connect(DB_FILE) as conn:
+    # Insert file details into the database
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO files (file_name, file_data) VALUES (?, ?)', 
-                       (file.filename, file_data))
+        cursor.execute("INSERT INTO files (filename, file_path) VALUES (?, ?)", (file.filename, file_path))
         conn.commit()
+        conn.close()
+    except Exception as e:
+        return jsonify({"error": "Failed to save file details in the database", "details": str(e)}), 500
 
-    return jsonify({"message": f"File '{file.filename}' uploaded to the database successfully."})
-
-@app.route('/download/database/<int:file_id>', methods=['GET'])
-def download_from_database(file_id):
-    """Download a file from the database."""
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT file_name, file_data FROM files WHERE id = ?', (file_id,))
-        result = cursor.fetchone()
-
-        if not result:
-            return jsonify({"error": "File not found"}), 404
-
-        file_name, file_data = result
-        return send_file(io.BytesIO(file_data),
-                         as_attachment=True,
-                         download_name=file_name,
-                         mimetype="application/octet-stream")
+    return jsonify({"message": f"File uploaded and saved in the database: {file.filename}"})
 
 @app.route('/list/files', methods=['GET'])
 def list_files():
-    """List all files in the database."""
-    with sqlite3.connect(DB_FILE) as conn:
+    """List all files stored in the database."""
+    try:
+        conn = sqlite3.connect(DATABASE_FILE)
         cursor = conn.cursor()
-        cursor.execute('SELECT id, file_name, upload_date FROM files')
+        cursor.execute("SELECT id, filename FROM files")
         files = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        return jsonify({"error": "Failed to fetch file details", "details": str(e)}), 500
 
-    return jsonify({"files": [{"id": f[0], "file_name": f[1], "upload_date": f[2]} for f in files]})
+    return jsonify({"files": [{"id": file[0], "filename": file[1]} for file in files]})
 
 if __name__ == '__main__':
     app.run(debug=True)
