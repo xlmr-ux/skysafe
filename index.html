@@ -5,15 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sky Lock - Secure File Management</title>
     <style>
-        /* Your existing CSS styles */
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #4b0082;
+            color: #ffd700;
+            padding: 20px;
+            position: relative;
+        }
+        header img {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 50px;
+            height: 50px;
+        }
+        .service {
+            margin: 20px;
+            padding: 20px;
+            display: inline-block;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 250px;
+            vertical-align: top;
+        }
+        .service img {
+            width: 80px;
+            cursor: pointer;
+        }
+        .service button {
+            margin-top: 10px;
+            padding: 10px 15px;
+            background-color: #4b0082;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .service button:hover {
+            background-color: #372061;
+        }
     </style>
 </head>
 <body>
     <header>
-        </header>
+        <img src="images/logo.png" alt="Sky Lock Logo">
+        <h1>Sky Lock</h1>
+        <p>Secure File Management</p>
+    </header>
 
     <h2>Our Services</h2>
 
+    <!-- Encrypt Files -->
     <div class="service">
         <h3>Encrypt Files</h3>
         <img src="images/encrypt.png" alt="Encrypt Icon">
@@ -21,6 +69,7 @@
         <button onclick="handleService('encrypt')">Encrypt File</button>
     </div>
 
+    <!-- Decrypt Files -->
     <div class="service">
         <h3>Decrypt Files</h3>
         <img src="images/decrypt.png" alt="Decrypt Icon">
@@ -28,27 +77,28 @@
         <button onclick="handleService('decrypt')">Decrypt File</button>
     </div>
 
+    <!-- Upload to Database (formerly Google Cloud) -->
     <div class="service">
-        <h3>Upload to GCC</h3>
+        <h3>Upload to Database</h3>
         <img src="images/gcloud.png" alt="Google Cloud Icon">
         <input type="file" id="uploadDatabaseInput">
         <button onclick="handleService('upload/database')">Upload File</button>
     </div>
 
+    <!-- Upload to Database (formerly AWS) -->
     <div class="service">
-        <h3>Upload to AWSe</h3>
+        <h3>Upload to Database</h3>
         <img src="images/aws.png" alt="AWS Icon">
         <input type="file" id="uploadDatabaseAWSInput">
         <button onclick="handleService('upload/database')">Upload File</button>
     </div>
 
     <script>
-        async function handleService(service) {
-            const inputId = {
-                encrypt: 'encryptFileInput',
-                decrypt: 'decryptFileInput',
-                'upload/database': 'uploadDatabaseInput'
-            }[service];
+        function handleService(service) {
+            const inputId = 
+                service === 'encrypt' ? 'encryptFileInput' :
+                service === 'decrypt' ? 'decryptFileInput' :
+                service.includes('database') ? 'uploadDatabaseInput' : null;
 
             if (!inputId) {
                 alert("Invalid service.");
@@ -64,26 +114,10 @@
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
 
-            try {
-                const response = await fetch(`/${service}`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Network response was not ok (${response.status})`);
-                }
-
-                const data = await response.json();
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    alert(data.message);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred. Please check the console for more details.');
-            }
+            fetch(`/${service}`, { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => alert(data.message || JSON.stringify(data)))
+                .catch(err => alert('Error: ' + err));
         }
     </script>
 </body>
