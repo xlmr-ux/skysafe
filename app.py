@@ -1,90 +1,111 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from cryptography.fernet import Fernet
-import boto3
+import sqlite3
 import os
+import io
 
 app = Flask(__name__)
 
-# Key for encryption/decryption
+# Encryption/Decryption setup
 SECRET_KEY = Fernet.generate_key()
 cipher = Fernet(SECRET_KEY)
 
-# AWS S3 Configuration
-AWS_BUCKET_NAME = "localsinghsavvy"
-AWS_ACCESS_KEY = "AKIAQYEI45XCXQ3EY27P"
-AWS_SECRET_KEY = "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"
-AWS_REGION = "us-east-1"
+# Database setup
+DB_FILE = 'file_storage.db'
 
-s3_client = boto3.client(
-    's3',
-    aws_access_key_id=AKIAQYEI45XCXQ3EY27P,
-    aws_secret_access_key=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,
-    region_name=us-east-1
-)
+def init_db():
+    """Initialize the database."""
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_name TEXT NOT NULL,
+            file_data BLOB NOT NULL,
+            upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        conn.commit()
 
-# Upload folder for temporary storage
-UPLOAD_FOLDER = 'uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+init_db()
 
+# Routes
 
-# Encrypt file
 @app.route('/encrypt', methods=['POST'])
 def encrypt_file():
+    """Encrypt a file."""
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+    file_data = file.read()
+    encrypted_data = cipher.encrypt(file_data)
 
-    with open(file_path, 'rb') as f:
-        encrypted_data = cipher.encrypt(f.read())
+    encrypted_filename = f"{file.filename}.enc"
+    return send_file(io.BytesIO(encrypted_data),
+                     as_attachment=True,
+                     download_name=encrypted_filename,
+                     mimetype="application/octet-stream")
 
-    encrypted_path = f"{file_path}.enc"
-    with open(encrypted_path, 'wb') as f:
-        f.write(encrypted_data)
-
-    return jsonify({"message": "File encrypted successfully", "path": encrypted_path})
-
-
-# Decrypt file
 @app.route('/decrypt', methods=['POST'])
 def decrypt_file():
+    """Decrypt a file."""
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+    file_data = file.read()
+    decrypted_data = cipher.decrypt(file_data)
 
-    with open(file_path, 'rb') as f:
-        decrypted_data = cipher.decrypt(f.read())
+    original_filename = file.filename.replace('.enc', '')
+    return send_file(io.BytesIO(decrypted_data),
+                     as_attachment=True,
+                     download_name=original_filename,
+                     mimetype="application/octet-stream")
 
-    decrypted_path = file_path.replace('.enc', '')
-    with open(decrypted_path, 'wb') as f:
-        f.write(decrypted_data)
-
-    return jsonify({"message": "File decrypted successfully", "path": decrypted_path})
-
-
-# Upload to AWS S3
-@app.route('/upload/aws', methods=['POST'])
-def upload_to_aws():
+@app.route('/upload/database', methods=['POST'])
+def upload_to_database():
+    """Upload a file to the database."""
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+    file_data = file.read()
 
-    try:
-        s3_client.upload_file(file_path, AWS_BUCKET_NAME, file.filename)
-    except Exception as e:
-        return jsonify({"error": f"Failed to upload file: {str(e)}"}), 500
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO files (file_name, file_data) VALUES (?, ?)', 
+                       (file.filename, file_data))
+        conn.commit()
 
-    return jsonify({"message": f"File uploaded to AWS S3: {file.filename}"})
+    return jsonify({"message": f"File '{file.filename}' uploaded to the database successfully."})
 
+@app.route('/download/database/<int:file_id>', methods=['GET'])
+def download_from_database(file_id):
+    """Download a file from the database."""
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT file_name, file_data FROM files WHERE id = ?', (file_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify({"error": "File not found"}), 404
+
+        file_name, file_data = result
+        return send_file(io.BytesIO(file_data),
+                         as_attachment=True,
+                         download_name=file_name,
+                         mimetype="application/octet-stream")
+
+@app.route('/list/files', methods=['GET'])
+def list_files():
+    """List all files in the database."""
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, file_name, upload_date FROM files')
+        files = cursor.fetchall()
+
+    return jsonify({"files": [{"id": f[0], "file_name": f[1], "upload_date": f[2]} for f in files]})
 
 if __name__ == '__main__':
     app.run(debug=True)
