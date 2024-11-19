@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify
 from cryptography.fernet import Fernet
 import os
 import sqlite3
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
@@ -30,6 +34,7 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+    logging.debug("Database initialized.")
 
 # Initialize the database
 init_db()
@@ -44,6 +49,7 @@ def encrypt_file():
         file = request.files['file']
         original_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(original_path)
+        logging.debug(f"File saved: {original_path}")
 
         # Encrypt file
         with open(original_path, 'rb') as f:
@@ -52,9 +58,11 @@ def encrypt_file():
         encrypted_path = f"{original_path}.enc"
         with open(encrypted_path, 'wb') as f:
             f.write(encrypted_data)
+        logging.debug(f"File encrypted: {encrypted_path}")
 
         return jsonify({"message": "File encrypted successfully", "path": encrypted_path})
     except Exception as e:
+        logging.error(f"Encryption failed: {str(e)}")
         return jsonify({"error": "Encryption failed", "details": str(e)}), 500
 
 @app.route('/decrypt', methods=['POST'])
@@ -67,20 +75,24 @@ def decrypt_file():
         file = request.files['file']
         encrypted_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(encrypted_path)
+        logging.debug(f"Encrypted file saved: {encrypted_path}")
 
         # Decrypt file
         try:
             with open(encrypted_path, 'rb') as f:
                 decrypted_data = cipher.decrypt(f.read())
         except Exception as e:
+            logging.error(f"Decryption failed: {str(e)}")
             return jsonify({"error": "Decryption failed", "details": str(e)}), 400
 
         decrypted_path = encrypted_path.replace('.enc', '')
         with open(decrypted_path, 'wb') as f:
             f.write(decrypted_data)
+        logging.debug(f"File decrypted: {decrypted_path}")
 
         return jsonify({"message": "File decrypted successfully", "path": decrypted_path})
     except Exception as e:
+        logging.error(f"Decryption failed: {str(e)}")
         return jsonify({"error": "Decryption failed", "details": str(e)}), 500
 
 @app.route('/upload/database', methods=['POST'])
@@ -93,6 +105,7 @@ def upload_to_database():
         file = request.files['file']
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(file_path)
+        logging.debug(f"File saved for database upload: {file_path}")
 
         # Insert file details into the database
         conn = sqlite3.connect(DATABASE_FILE)
@@ -100,9 +113,14 @@ def upload_to_database():
         cursor.execute("INSERT INTO files (filename, file_path) VALUES (?, ?)", (file.filename, file_path))
         conn.commit()
         conn.close()
+        logging.debug(f"File inserted into database: {file.filename}")
 
         return jsonify({"message": f"File uploaded and saved in the database: {file.filename}"})
+    except sqlite3.Error as db_error:
+        logging.error(f"Database error: {str(db_error)}")
+        return jsonify({"error": "Database error", "details": str(db_error)}), 500
     except Exception as e:
+        logging.error(f"Unexpected error: {str(e)}")
         return jsonify({"error": "File upload failed", "details": str(e)}), 500
 
 @app.route('/list/files', methods=['GET'])
@@ -114,9 +132,11 @@ def list_files():
         cursor.execute("SELECT id, filename FROM files")
         files = cursor.fetchall()
         conn.close()
+        logging.debug(f"Files fetched: {files}")
 
         return jsonify({"files": [{"id": file[0], "filename": file[1]} for file in files]})
     except Exception as e:
+        logging.error(f"Failed to fetch file details: {str(e)}")
         return jsonify({"error": "Failed to fetch file details", "details": str(e)}), 500
 
 if __name__ == '__main__':
