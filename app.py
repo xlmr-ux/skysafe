@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from cryptography.fernet import Fernet
 import boto3
-from google.cloud import storage
 import os
 
 app = Flask(__name__)
@@ -10,7 +9,20 @@ app = Flask(__name__)
 SECRET_KEY = Fernet.generate_key()
 cipher = Fernet(SECRET_KEY)
 
-# Upload folders
+# AWS S3 Configuration
+AWS_BUCKET_NAME = "localsinghsavvy"
+AWS_ACCESS_KEY = "AKIAQYEI45XCXQ3EY27P"
+AWS_SECRET_KEY = "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"
+AWS_REGION = "us-east-1"
+
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=AKIAQYEI45XCXQ3EY27P,
+    aws_secret_access_key=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,
+    region_name=us-east-1
+)
+
+# Upload folder for temporary storage
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -56,23 +68,6 @@ def decrypt_file():
     return jsonify({"message": "File decrypted successfully", "path": decrypted_path})
 
 
-# Upload to Google Cloud Storage
-@app.route('/upload/google', methods=['POST'])
-def upload_to_google():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
-    file = request.files['file']
-    bucket_name = "your-google-cloud-bucket"
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-
-    blob = bucket.blob(file.filename)
-    blob.upload_from_file(file)
-
-    return jsonify({"message": f"File uploaded to Google Cloud: {file.filename}"})
-
-
 # Upload to AWS S3
 @app.route('/upload/aws', methods=['POST'])
 def upload_to_aws():
@@ -80,10 +75,13 @@ def upload_to_aws():
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files['file']
-    bucket_name = "your-aws-s3-bucket"
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)
 
-    s3_client = boto3.client('s3')
-    s3_client.upload_fileobj(file, bucket_name, file.filename)
+    try:
+        s3_client.upload_file(file_path, AWS_BUCKET_NAME, file.filename)
+    except Exception as e:
+        return jsonify({"error": f"Failed to upload file: {str(e)}"}), 500
 
     return jsonify({"message": f"File uploaded to AWS S3: {file.filename}"})
 
